@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>BLE Example e-AR</title>
+<!--*************************************************************
+*
+* Web BLE Example
+*
+* My simple program for connecting to BLE device via HTML5
+*
+* by Benny Lo
+* Oct 30 2017
+********************************************************************-->
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+
+<!--<script src="http://www.java.com/js/deployJava.js"></script>-->
+<noscript> 
+Please enable Java script on your browser. </br>
+<a href="http://www.google.com/support/bin/answer.py?answer=23852">Click here for details on how to enable Java script on your browser</a>
+</noscript> 
+<script src="canvasdrawing.js" type="text/javascript"></script>
+<script src="linegraph.js" type="text/javascript"> </script>      
+    <script src="font.js" type="text/javascript"> </script>
+
+ <script type="text/javascript" >
+   
+  function init()
+  {
+    if (isWebBluetoothEnabled())
+    {
+        console.log("BLE is enabled!");        
+    }
+    else {
+        console.log("BLE is not enabled in this web browser!")
+
+    }
+  }
+
+  function isWebBluetoothEnabled() {
+    if (navigator.bluetooth) {
+      return true;
+    } else {
+      ChromeSamples.setStatus('Web Bluetooth API is not available.\n' +
+          'Please make sure the "Experimental Web Platform features" flag is enabled.');
+      return false;
+    }
+  }
+
+  function onButtonClick() {
+    
+    console.log('Requesting Bluetooth Device...');
+    navigator.bluetooth.requestDevice({
+   // filters: [...] <- Prefer filters to save energy & show relevant devices.
+      acceptAllDevices: true,
+      optionalServices: ['device_information']})
+  .then(device => {
+    console.log('Connecting to GATT Server...');
+    return device.gatt.connect();
+  })
+  .then(server => {
+    console.log('Getting Device Information Service...');
+    return server.getPrimaryService('device_information');
+  })
+  .then(service => {
+    console.log('Getting Device Information Characteristics...');
+    return service.getCharacteristics();
+  })
+  .then(characteristics => {
+    let queue = Promise.resolve();
+    let decoder = new TextDecoder('utf-8');
+    characteristics.forEach(characteristic => {
+      switch (characteristic.uuid) {
+
+        case BluetoothUUID.getCharacteristic('manufacturer_name_string'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> Manufacturer Name String: ' + decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('model_number_string'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> Model Number String: ' + decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('hardware_revision_string'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> Hardware Revision String: ' + decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('firmware_revision_string'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> Firmware Revision String: ' + decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('software_revision_string'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> Software Revision String: ' + decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('system_id'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> System ID: ');
+            console.log('  > Manufacturer Identifier: ' +
+                padHex(value.getUint8(4)) + padHex(value.getUint8(3)) +
+                padHex(value.getUint8(2)) + padHex(value.getUint8(1)) +
+                padHex(value.getUint8(0)));
+            console.log('  > Organizationally Unique Identifier: ' +
+                padHex(value.getUint8(7)) + padHex(value.getUint8(6)) +
+                padHex(value.getUint8(5)));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('ieee_11073-20601_regulatory_certification_data_list'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> IEEE 11073-20601 Regulatory Certification Data List: ' +
+                decoder.decode(value));
+          });
+          break;
+
+        case BluetoothUUID.getCharacteristic('pnp_id'):
+          queue = queue.then(_ => characteristic.readValue()).then(value => {
+            console.log('> PnP ID:');
+            console.log('  > Vendor ID Source: ' +
+                (value.getUint8(0) === 1 ? 'Bluetooth' : 'USB'));
+            if (value.getUint8(0) === 1) {
+              console.log('  > Vendor ID: ' +
+                  (value.getUint8(1) | value.getUint8(2) << 8));
+            } else {
+              console.log('  > Vendor ID: ' +
+                  getUsbVendorName(value.getUint8(1) | value.getUint8(2) << 8));
+            }
+            console.log('  > Product ID: ' +
+                (value.getUint8(3) | value.getUint8(4) << 8));
+            console.log('  > Product Version: ' +
+                (value.getUint8(5) | value.getUint8(6) << 8));
+          });
+          break;
+
+        default: console.log('> Unknown Characteristic: ' + characteristic.uuid);
+      }
+    });
+    return queue;
+  })
+  .catch(error => {
+    console.log('Argh! ' + error);
+  });
+  
+}
+function padHex(value) {
+  return ('00' + value.toString(16).toUpperCase()).slice(-2);
+}
+
+function getUsbVendorName(value) {
+  // Check out page source to see what valueToUsbVendorName object is.
+  return value +
+      (value in valueToUsbVendorName ? ' (' + valueToUsbVendorName[value] + ')' : '');
+}
+function handleIMUNotifications(event) {
+  let value = event.target.value;
+  var ax=value.getInt16(1,true);
+  var ay=value.getInt16(3,true);
+  var az=value.getInt16(5,true);
+  var gx=value.getInt16(7,true);
+  var gy=value.getInt16(9,true);
+  var gz=value.getInt16(11,true);
+  var mx=value.getInt16(13,true);
+  var my=value.getInt16(15,true);
+  var mz=value.getInt16(17,true);
+  if (mx<0)mx*=-1;
+  if (my<0)my*=-1;
+  if (mz<0)mz*=-1;
+  LineGraph_AddData(0,0,ax);
+  LineGraph_AddData(0,1,ay);
+  LineGraph_AddData(0,2,az);
+  LineGraph_AddData(1,0,gx);
+  LineGraph_AddData(1,1,gy);
+  LineGraph_AddData(1,2,gz);
+  LineGraph_AddData(2,0,mx);
+  LineGraph_AddData(2,1,my);
+  LineGraph_AddData(2,2,mz);
+  LineGraph_Plot(0); 
+  LineGraph_Plot(1);  
+  LineGraph_Plot(2);  
+}
+function handleTemperatureNotifications(event)
+{
+ let value = event.target.value;
+  var temp1=value.getInt16(1,true);
+  var temp2=value.getInt16(3,true);
+  LineGraph_AddData(3,0,temp1/10.0);
+  LineGraph_AddData(3,1,temp2/10.0);  
+  LineGraph_Plot(3); 
+}
+function handleAccelNotifications(event) {
+  let value = event.target.value;
+  let a = [];
+  // Convert raw data bytes to hex values just for the sake of showing something.
+  // In the "real" world, you'd use data.getUint8, data.getUint16 or even
+  // TextDecoder to process raw data bytes.
+  for (let i = 0; i < value.byteLength; i++) {
+    a.push('0x' + ('00' + value.getUint8(i).toString(16)).slice(-2));
+  }
+  
+  console.log('Accel> ' + a.join(' '));
+  
+}
+function onDiscoverService() {
+  var getdeviceinfo=document.getElementById("deviceinfo");
+  getdeviceinfo.hidden=true;
+  var discoverservice=document.getElementById("discover");
+  discoverservice.hidden=true;
+
+  // Validate services UUID entered by user first.
+  /*let optionalServices = document.querySelector('#optionalServices').value
+    .split(/, ?/).map(s => s.startsWith('0x') ? parseInt(s) : s)
+    .filter(s => s && BluetoothUUID.getService);*/
+let optionalServices=['47442014-0f63-5b27-9122-728099603712'];//BSN IoT (note UUID lower case)
+  console.log('Requesting any Bluetooth Device...');
+  navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: optionalServices//BSN IoT
+  })
+  .then(device => {
+    console.log('Connecting to GATT Server...');
+    return device.gatt.connect();
+  })
+  .then(server => {
+    // Note that we could also get all services that match a specific UUID by
+    // passing it to getPrimaryServices().
+    console.log('Getting Services...');
+    return server.getPrimaryServices();    
+  })
+  .then(services => {
+    console.log('Getting Characteristics...');
+    let queue = Promise.resolve();
+    services.forEach(service => {
+      queue = queue.then(_ => service.getCharacteristics().then(characteristics => {
+        if (service.uuid==['47442014-0f63-5b27-9122-728099603712'])
+        {
+            console.log("> Service: BSN IoT");
+            var canvastable=document.getElementById("canvastable");
+            canvastable.hidden=false;            
+            draw();
+        }
+        else if (service.uuid==['0000180a-0000-1000-8000-00805f9b34fb'])
+        {
+            console.log("> Service: Device Info");
+        }
+        else console.log('> Service: ' + service.uuid);
+
+        characteristics.forEach(characteristic => {
+            if (characteristic.uuid==['47442015-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Accelerometer");
+                return characteristic.startNotifications().then(_ => {
+                    console.log('> Notifications started');
+                    characteristic.addEventListener('characteristicvaluechanged',
+                    handleAccelNotifications);
+                });
+            }
+            else if (characteristic.uuid==['47442016-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Gyroscope");
+            }
+            else if (characteristic.uuid==['47442017-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Magnetometer");
+            }
+            else if (characteristic.uuid==['47442018-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Temperature");
+                return characteristic.startNotifications().then(_ => {
+                    //console.log('> Notifications started');
+                    characteristic.addEventListener('characteristicvaluechanged',
+                    handleTemperatureNotifications);
+                });
+            }
+            else if (characteristic.uuid==['47442019-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Humidity");
+            }
+            else if (characteristic.uuid==['4744201a-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: LED");
+            }
+            else if (characteristic.uuid==['4744201b-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Screen message");
+            }
+            else if (characteristic.uuid==['4744201c-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: iBeacon");
+            }
+            else if (characteristic.uuid==['4744201d-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Dust");
+            }
+            else if (characteristic.uuid==['4744201e-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: PPG");
+            }
+            else if (characteristic.uuid==['4744201f-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Touch");
+            }
+            else if (characteristic.uuid==['47442020-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: IMU");
+                return characteristic.startNotifications().then(_ => {
+                    //console.log('> Notifications started');
+                    characteristic.addEventListener('characteristicvaluechanged',
+                    handleIMUNotifications);
+                });
+            }
+            else if (characteristic.uuid==['47442021-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Sampling Frequency");
+            }
+            else if (characteristic.uuid==['47442022-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Sampling Frequency Read");
+            }
+            else if (characteristic.uuid==['47442023-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Reset");
+            }
+            else if (characteristic.uuid==['47442024-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: IMU Power mode");
+            }
+            else if (characteristic.uuid==['47442025-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Advert Time Interval");
+            }
+            else if (characteristic.uuid==['47442026-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Battery");
+            }
+            else if (characteristic.uuid==['47442027-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Write to Flash");
+            }
+            else if (characteristic.uuid==['47442028-0f63-5b27-9122-728099603712'])
+            {
+                console.log(">> Characteristic: Read from Flash");
+            }
+            else if (characteristic.uuid==['00002a29-0000-1000-8000-00805f9b34fb'])
+            {
+                console.log(">> Characteristic: Manufacturer");
+            }
+            else 
+          console.log('>> Characteristic: ' + characteristic.uuid + ' ' +
+              getSupportedProperties(characteristic));
+        });
+      }));
+    });
+    return queue;
+  })
+  .catch(error => {
+    console.log('Argh! ' + error);
+  });
+}
+
+/* Utils */
+
+function getSupportedProperties(characteristic) {
+  let supportedProperties = [];
+  for (const p in characteristic.properties) {
+    if (characteristic.properties[p] === true) {
+      supportedProperties.push(p.toUpperCase());
+    }
+  }
+  return '[' + supportedProperties.join(', ') + ']';
+}
+</script>
+</head>
+<body onload="init();">
+ <h1>BLE Example - e-AR Sensor</h1>   
+<input type="button" id="deviceinfo" value="Get Device Information" onclick="onButtonClick();"/>
+<input type="button" id="discover" value="Discover Service" onclick="onDiscoverService();"/><br/>
+<table id="canvastable" hidden="1">
+ <tr><td>Accelerometer</td><td>Gyroscope</td></tr> <tr><td>
+<canvas id="left_accelerometer" width="512" height="240"></canvas></td><td><canvas id="right_accelerometer" width="512" height="240"></canvas></td></tr>
+    <tr><td><b>Magnetometer</b></td><td><b>Temperature</b></td></tr>
+    <tr><td><canvas id="left_gyro" width="512" height="240"></canvas></td><td><canvas id="right_gyro" width="512" height="240"></canvas></td></tr>
+    </table>
+    <canvas id="detection_canvas" width="1024" height="120" hidden="1"><br/>
+</body></html>
