@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>BLE Example e-AR</title>
+<title>HTML5 BLE Example e-AR</title>
 <!--*************************************************************
 *
 * Web BLE Example
@@ -41,29 +41,29 @@ Please enable Java script on your browser. </br>
     if (navigator.bluetooth) {
       return true;
     } else {
-      ChromeSamples.setStatus('Web Bluetooth API is not available.\n' +
+      alert('Web Bluetooth API is not available.\n' +
           'Please make sure the "Experimental Web Platform features" flag is enabled.');
       return false;
     }
   }
 
-  function onButtonClick() {
-    
-    console.log('Requesting Bluetooth Device...');
+  /*function onButtonClick() {
+    //search for devices and getting the device information 
+    //console.log('Requesting Bluetooth Device...');
     navigator.bluetooth.requestDevice({
    // filters: [...] <- Prefer filters to save energy & show relevant devices.
-      acceptAllDevices: true,
-      optionalServices: ['device_information']})
+      acceptAllDevices: true,//search for all devices
+      optionalServices: ['device_information']})//and search for those support device infomration
   .then(device => {
-    console.log('Connecting to GATT Server...');
+    //console.log('Connecting to GATT Server...');
     return device.gatt.connect();
   })
   .then(server => {
-    console.log('Getting Device Information Service...');
+    //console.log('Getting Device Information Service...');
     return server.getPrimaryService('device_information');
   })
   .then(service => {
-    console.log('Getting Device Information Characteristics...');
+    //console.log('Getting Device Information Characteristics...');
     return service.getCharacteristics();
   })
   .then(characteristics => {
@@ -150,7 +150,7 @@ Please enable Java script on your browser. </br>
     console.log('Argh! ' + error);
   });
   
-}
+}*/
 function padHex(value) {
   return ('00' + value.toString(16).toUpperCase()).slice(-2);
 }
@@ -161,6 +161,7 @@ function getUsbVendorName(value) {
       (value in valueToUsbVendorName ? ' (' + valueToUsbVendorName[value] + ')' : '');
 }
 function handleIMUNotifications(event) {
+  //read the IMU sensor data and plot the data out
   let value = event.target.value;
   var ax=value.getInt16(1,true);
   var ay=value.getInt16(3,true);
@@ -188,7 +189,7 @@ function handleIMUNotifications(event) {
   LineGraph_Plot(2);  
 }
 function handleTemperatureNotifications(event)
-{
+{//read the temperature values and plot those out
  let value = event.target.value;
   var temp1=value.getInt16(1,true);
   var temp2=value.getInt16(3,true);
@@ -209,10 +210,10 @@ function handleAccelNotifications(event) {
   console.log('Accel> ' + a.join(' '));
   
 }
-function onDiscoverService() {
-  var getdeviceinfo=document.getElementById("deviceinfo");
-  getdeviceinfo.hidden=true;
-  var discoverservice=document.getElementById("discover");
+function onDiscoverService() {//start searching for BLE devices
+  //var getdeviceinfo=document.getElementById("deviceinfo");
+  //getdeviceinfo.hidden=true;
+  var discoverservice=document.getElementById("discover");//hide the button
   discoverservice.hidden=true;
 
   // Validate services UUID entered by user first.
@@ -240,122 +241,103 @@ let optionalServices=['47442014-0f63-5b27-9122-728099603712'];//BSN IoT (note UU
     let queue = Promise.resolve();
     services.forEach(service => {
       queue = queue.then(_ => service.getCharacteristics().then(characteristics => {
-        if (service.uuid==['47442014-0f63-5b27-9122-728099603712'])
+        if (service.uuid==['47442014-0f63-5b27-9122-728099603712'])//looking for e-AR sensor
         {
-            console.log("> Service: BSN IoT");
+            console.log("> Service: BSN IoT");//got it
             var canvastable=document.getElementById("canvastable");
             canvastable.hidden=false;            
             draw();
         }
-        else if (service.uuid==['0000180a-0000-1000-8000-00805f9b34fb'])
+        else if (service.uuid==['0000180a-0000-1000-8000-00805f9b34fb'])//this is device information
         {
             console.log("> Service: Device Info");
         }
-        else console.log('> Service: ' + service.uuid);
-
+        else console.log('> Service: ' + service.uuid);//other services
+        //scan for all characteristics of the service
         characteristics.forEach(characteristic => {
             if (characteristic.uuid==['47442015-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Accelerometer");
+            {// console.log(">> Characteristic: Accelerometer");
                 return characteristic.startNotifications().then(_ => {
-                    console.log('> Notifications started');
+                    //console.log('> Notifications started');
                     characteristic.addEventListener('characteristicvaluechanged',
                     handleAccelNotifications);
                 });
             }
             else if (characteristic.uuid==['47442016-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Gyroscope");
+            {//console.log(">> Characteristic: Gyroscope");
             }
             else if (characteristic.uuid==['47442017-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Magnetometer");
+            {//console.log(">> Characteristic: Magnetometer");
             }
             else if (characteristic.uuid==['47442018-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Temperature");
+            {// console.log(">> Characteristic: Temperature");
                 return characteristic.startNotifications().then(_ => {
                     //console.log('> Notifications started');
+                    //set the event listener for this characteristic
                     characteristic.addEventListener('characteristicvaluechanged',
                     handleTemperatureNotifications);
                 });
             }
             else if (characteristic.uuid==['47442019-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Humidity");
+            {//   console.log(">> Characteristic: Humidity");
             }
             else if (characteristic.uuid==['4744201a-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: LED");
+            {//  console.log(">> Characteristic: LED");
             }
             else if (characteristic.uuid==['4744201b-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Screen message");
+            {//   console.log(">> Characteristic: Screen message");
             }
             else if (characteristic.uuid==['4744201c-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: iBeacon");
+            {//  console.log(">> Characteristic: iBeacon");
             }
             else if (characteristic.uuid==['4744201d-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Dust");
+            {//    console.log(">> Characteristic: Dust");
             }
             else if (characteristic.uuid==['4744201e-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: PPG");
+            {// console.log(">> Characteristic: PPG");
             }
             else if (characteristic.uuid==['4744201f-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Touch");
+            {//  console.log(">> Characteristic: Touch");
             }
             else if (characteristic.uuid==['47442020-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: IMU");
+            {//   console.log(">> Characteristic: IMU");
                 return characteristic.startNotifications().then(_ => {
                     //console.log('> Notifications started');
+                    //set the event listener for this characteristic
                     characteristic.addEventListener('characteristicvaluechanged',
                     handleIMUNotifications);
                 });
             }
             else if (characteristic.uuid==['47442021-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Sampling Frequency");
+            {// console.log(">> Characteristic: Sampling Frequency");
             }
             else if (characteristic.uuid==['47442022-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Sampling Frequency Read");
+            {//  console.log(">> Characteristic: Sampling Frequency Read");
             }
             else if (characteristic.uuid==['47442023-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Reset");
+            {//   console.log(">> Characteristic: Reset");
             }
             else if (characteristic.uuid==['47442024-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: IMU Power mode");
+            {//   console.log(">> Characteristic: IMU Power mode");
             }
             else if (characteristic.uuid==['47442025-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Advert Time Interval");
+            {//  console.log(">> Characteristic: Advert Time Interval");
             }
             else if (characteristic.uuid==['47442026-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Battery");
+            {//  console.log(">> Characteristic: Battery");
             }
             else if (characteristic.uuid==['47442027-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Write to Flash");
+            {// console.log(">> Characteristic: Write to Flash");
             }
             else if (characteristic.uuid==['47442028-0f63-5b27-9122-728099603712'])
-            {
-                console.log(">> Characteristic: Read from Flash");
+            {// console.log(">> Characteristic: Read from Flash");
             }
             else if (characteristic.uuid==['00002a29-0000-1000-8000-00805f9b34fb'])
-            {
-                console.log(">> Characteristic: Manufacturer");
+            {//console.log(">> Characteristic: Manufacturer");
             }
-            else 
+            else  
           console.log('>> Characteristic: ' + characteristic.uuid + ' ' +
-              getSupportedProperties(characteristic));
+              getSupportedProperties(characteristic));//other characteristics
         });
       }));
     });
@@ -368,7 +350,7 @@ let optionalServices=['47442014-0f63-5b27-9122-728099603712'];//BSN IoT (note UU
 
 /* Utils */
 
-function getSupportedProperties(characteristic) {
+function getSupportedProperties(characteristic) {//find the details of a characteristic
   let supportedProperties = [];
   for (const p in characteristic.properties) {
     if (characteristic.properties[p] === true) {
@@ -381,8 +363,8 @@ function getSupportedProperties(characteristic) {
 </head>
 <body onload="init();">
  <h1>BLE Example - e-AR Sensor</h1>   
-<input type="button" id="deviceinfo" value="Get Device Information" onclick="onButtonClick();"/>
-<input type="button" id="discover" value="Discover Service" onclick="onDiscoverService();"/><br/>
+<!--<input type="button" id="deviceinfo" value="Get Device Information" onclick="onButtonClick();"/>-->
+<input type="button" id="discover" value="Discover BLE devices" onclick="onDiscoverService();"/><br/>
 <table id="canvastable" hidden="1">
  <tr><td>Accelerometer</td><td>Gyroscope</td></tr> <tr><td>
 <canvas id="left_accelerometer" width="512" height="240"></canvas></td><td><canvas id="right_accelerometer" width="512" height="240"></canvas></td></tr>
