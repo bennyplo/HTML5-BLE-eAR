@@ -245,7 +245,9 @@ let optionalServices=['47442014-0f63-5b27-9122-728099603712'];//BSN IoT (note UU
         {
             console.log("> Service: BSN IoT");//got it
             var canvastable=document.getElementById("canvastable");
-            canvastable.hidden=false;            
+            canvastable.hidden=false;    
+             var instructables=document.getElementById("instructions");
+            instructables.hidden=true;        
             draw();
         }
         else if (service.uuid==['0000180a-0000-1000-8000-00805f9b34fb'])//this is device information
@@ -361,8 +363,22 @@ function getSupportedProperties(characteristic) {//find the details of a charact
 }
 </script>
 </head>
-<body onload="init();">
+<body onload="init();"  style="font-family:Arial">
  <h1>BLE Example - e-AR Sensor</h1>   
+ <div id="instructions">
+ This is a simple example program of using the BLE functions of HTML to connect to the e-AR sensor. <br/>
+ Please note that it will only work with Google Chrome in devices with Bluetooth 4.0 or above.<br/>
+ You also need to make sure that the "Experimental Web Platform features" flag is enabled. (in chrome://flags)<br/>
+ To start:
+ <ul>  
+  <li>Touch the back of the e-AR sensor to start the sensor (i.e. the transparent section of the sensor with the copper plate underneath) [You should see the blue LED lit up when it starts])</li>
+  <li>Click 'Discover BLE devices' to find the e-AR sensor nearby</li>
+  <li>You should then see the "e-AR2016" listed as one of the devices. Selec the 'e-AR216' device then click on 'Pair'</li>
+  <li>The program will then establish the connection with the e-AR sensor. Once it is connected, the signals will be plotted on the screen</li>
+  <li>Should you have issue connecting, please first check the Google Chrome console for error messages (More Tools->Deverloper Tools->Console)</li>
+</ul>
+  Source code can be found via: <a href="https://github.com/bennyplo/HTML5-BLE-eAR">https://github.com/bennyplo/HTML5-BLE-eAR</a><br/><hr/>
+</div>
 <!--<input type="button" id="deviceinfo" value="Get Device Information" onclick="onButtonClick();"/>-->
 <input type="button" id="discover" value="Discover BLE devices" onclick="onDiscoverService();"/><br/>
 <table id="canvastable" hidden="1">
